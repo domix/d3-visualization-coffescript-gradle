@@ -1,0 +1,48 @@
+buildscript {
+    repositories { mavenCentral() }
+    dependencies { classpath 'com.eriwen:gradle-js-plugin:1.0.3' }
+}
+
+apply plugin: 'war'
+apply plugin: 'jetty'
+apply plugin: 'js'
+apply from: "coffeescript.gradle"
+
+task compileCoffeeScript(type: CompileCoffeeScript)
+def jsSrcDir = "${project.buildDir}/resources/js"
+def jsSrcVendor = "src/main/javascript/"
+
+processResources { 
+    from compileCoffeeScript
+    into jsSrcDir
+}
+
+combineJs {
+    dependsOn processResources
+    source =  fileTree(jsSrcVendor) + fileTree(jsSrcDir)
+    dest = file("${project.buildDir}/resources/js/all/all.js")
+}
+
+minifyJs {
+    source = combineJs //fileTree("${project.buildDir}/resources/js/")
+    //dest = file("${project.buildDir}/resources/js/gziped/all.min.js")
+    dest = file("${project.buildDir}/resources/webapp/js/all.1.0.min.js")
+    closure {
+        warningLevel = 'QUIET'
+    }
+}
+
+gzipJs {
+    source = minifyJs
+    dest = file("${project.buildDir}/resources/webapp/js/all.1.0.min.js")
+}
+
+war {
+    dependsOn minifyJs
+    //dependsOn gzipJs
+    from "${project.buildDir}/resources/webapp" // adds a file-set to the root of the archive
+    //webInf { from 'src/additionalWebInf' } // adds a file-set to the WEB-INF dir.
+    //classpath fileTree('additionalLibs') // adds a file-set to the WEB-INF/lib dir.
+    //classpath configurations.moreLibs // adds a configuration to the WEB-INF/lib dir.
+    //webXml = file('src/someWeb.xml') // copies a file to WEB-INF/web.xml
+}
